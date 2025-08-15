@@ -1,0 +1,52 @@
+- name: Install Nginx and Certbot
+  apt:
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+    state: present
+    update_cache: yes
+
+- name: Ensure certbot webroot exists
+  file:
+    path: /var/www/certbot
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+
+- name: Create Nginx site configs
+  template:
+    src: nginx_site.conf.j2
+    dest: "/etc/nginx/sites-available/{{ item.domain }}.conf"
+  loop: "{{ nginx_sites }}"
+  notify: Reload Nginx
+
+- name: Enable Nginx sites
+  file:
+    src: "/etc/nginx/sites-available/{{ item.domain }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ item.domain }}.conf"
+    state: link
+  loop: "{{ nginx_sites }}"
+  notify: Reload Nginx
+
+- name: Test Nginx config
+  command: nginx -t
+  register: nginx_test
+  failed_when: "'successful' not in nginx_test.stderr"
+
+- name: Reload Nginx
+  service:
+    name: nginx
+    state: reloaded
+
+- name: Obtain SSL certs
+  command: >
+    certbot certonly --webroot
+    -w /var/www/certbot
+    -d {{ item.domain }}
+    --non-interactive --agree-tos
+    -m {{ email }}
+  args:
+    creates: "/etc/letsencrypt/live/{{ item.domain }}/fullchain.pem"
+  loop: "{{ nginx_sites }}"
