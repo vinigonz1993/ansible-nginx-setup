@@ -41,16 +41,17 @@ SERVER_IP=123.45.67.89
 SERVER_USER=ubuntu
 
 # Let's Encrypt email (certificate registration)
-EMAIL=admin@toukiai.com.br
+EMAIL=
 
 # API configuration
-API_DOMAIN=api.toukiai.com.br
+API_DOMAIN=api.app.com.br
 API_PORT=8000
-API_STATIC=/var/lib/docker/volumes/touki-agent-backend_prod_static/_data/
+API_STATIC=/var/lib/docker/volumes/app-backend_prod_static/_data/
 
 # Frontend configuration
-FRONTEND_DOMAIN=toukiai.com.br
-FRONTEND_ROOT=/var/lib/docker/volumes/touki-agent-frontend_prod-dist/_data
+FRONTEND_DOMAIN=app.com.br
+FRONTEND_PORT=3000
+FRONTEND_ROOT=/var/lib/docker/volumes/app-frontend_prod-dist/_data
 
 ---
 
@@ -69,8 +70,8 @@ FRONTEND_ROOT=/var/lib/docker/volumes/touki-agent-frontend_prod-dist/_data
    ./deploy.sh
 
 4. Verify deployment
-   - API should be available at: https://api.toukiai.com.br
-   - Frontend should be available at: https://toukiai.com.br
+   - API should be available at: https://api.app.com.br
+   - Frontend should be available at: https://app.com.br
 
 ---
 

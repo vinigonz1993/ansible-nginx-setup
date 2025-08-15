@@ -1,11 +1,10 @@
 - hosts: web
   become: yes
   vars:
-    nginx_sites:
-      - domain: "{{ lookup('env','API_DOMAIN') }}"
-        backend_port: "{{ lookup('env','API_PORT') }}"
-        static_path: "{{ lookup('env','API_STATIC') }}"
-      - domain: "{{ lookup('env','FRONTEND_DOMAIN') }}"
-        root_path: "{{ lookup('env','FRONTEND_ROOT') }}"
+    email: "{{ lookup('env','EMAIL') }}"
+    api_domain: "{{ lookup('env','API_DOMAIN') }}"
+    api_port: "{{ lookup('env','API_PORT') }}"
+    frontend_domain: "{{ lookup('env','FRONTEND_DOMAIN') }}"
+    frontend_port: "{{ lookup('env','FRONTEND_PORT') }}"
   roles:
     - nginx_certbot

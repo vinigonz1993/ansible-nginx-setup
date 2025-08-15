@@ -8,7 +8,7 @@ fi
 
 export $(grep -v '^#' .env | xargs)
 
-REQUIRED_VARS=("SERVER_IP" "SERVER_USER" "EMAIL" "API_DOMAIN" "API_PORT" "API_STATIC" "FRONTEND_DOMAIN" "FRONTEND_ROOT")
+REQUIRED_VARS=("SERVER_IP" "SERVER_USER" "EMAIL" "API_DOMAIN" "API_PORT" "FRONTEND_DOMAIN" "FRONTEND_PORT")
 for var in "${REQUIRED_VARS[@]}"; do
   if [[ -z "${!var:-}" ]]; then
     echo "❌ Missing required env var: $var"
@@ -27,9 +27,8 @@ ansible-playbook \
   -e email="$EMAIL" \
   -e api_domain="$API_DOMAIN" \
   -e api_port="$API_PORT" \
-  -e api_static="$API_STATIC" \
   -e frontend_domain="$FRONTEND_DOMAIN" \
-  -e frontend_root="$FRONTEND_ROOT" \
+  -e frontend_port="$FRONTEND_PORT" \
   setup-nginx.yml
 
 rm -f "$INVENTORY_FILE"

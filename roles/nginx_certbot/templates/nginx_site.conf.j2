@@ -1,6 +1,7 @@
+# Backend / API
 server {
     listen 80;
-    server_name {{ domain }};
+    server_name {{ api_domain }};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -13,17 +14,17 @@ server {
 
 server {
     listen 443 ssl;
-    server_name {{ domain }};
+    server_name {{ api_domain }};
 
-    ssl_certificate /etc/letsencrypt/live/{{ domain }}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/{{ domain }}/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/{{ api_domain }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ api_domain }}/privkey.pem;
 
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
 
-    {% if backend_port is defined %}
+    # Proxy to backend container
     location / {
-        proxy_pass http://localhost:{{ backend_port }};
+        proxy_pass http://localhost:{{ api_port }};
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -31,18 +32,38 @@ server {
     }
 
     client_max_body_size 30M;
+}
 
-    location /static/ {
-        alias {{ static_path }};
+# Frontend
+server {
+    listen 80;
+    server_name {{ frontend_domain }};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
     }
-    {% else %}
+
     location / {
-        root {{ root_path }};
-        try_files $uri $uri/ /index.html;
-
-        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" always;
-        add_header Pragma "no-cache" always;
-        add_header Expires "0" always;
+        return 301 https://$host$request_uri;
     }
-    {% endif %}
+}
+
+server {
+    listen 443 ssl;
+    server_name {{ frontend_domain }};
+
+    ssl_certificate /etc/letsencrypt/live/{{ frontend_domain }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ frontend_domain }}/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    # Proxy to frontend container
+    location / {
+        proxy_pass http://localhost:{{ frontend_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }

@@ -1,13 +1,18 @@
-- name: Install Nginx and Certbot
+---
+- name: Ensure Nginx is installed
   apt:
-    name:
-      - nginx
-      - certbot
-      - python3-certbot-nginx
+    name: nginx
     state: present
     update_cache: yes
 
-- name: Ensure certbot webroot exists
+- name: Ensure Certbot and Nginx plugin are installed
+  apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+
+- name: Create directory for ACME challenges
   file:
     path: /var/www/certbot
     state: directory
@@ -15,38 +20,63 @@
     group: www-data
     mode: '0755'
 
-- name: Create Nginx site configs
+- name: Render Nginx config for backend
   template:
     src: nginx_site.conf.j2
-    dest: "/etc/nginx/sites-available/{{ item.domain }}.conf"
-  loop: "{{ nginx_sites }}"
-  notify: Reload Nginx
+    dest: /etc/nginx/sites-available/{{ api_domain }}.conf
+  vars:
+    domain: "{{ api_domain }}"
+    backend_port: "{{ api_port }}"
 
-- name: Enable Nginx sites
+- name: Render Nginx config for frontend
+  template:
+    src: nginx_site.conf.j2
+    dest: /etc/nginx/sites-available/{{ frontend_domain }}.conf
+  vars:
+    domain: "{{ frontend_domain }}"
+    backend_port: "{{ frontend_port }}"
+
+- name: Enable backend site
   file:
-    src: "/etc/nginx/sites-available/{{ item.domain }}.conf"
-    dest: "/etc/nginx/sites-enabled/{{ item.domain }}.conf"
+    src: /etc/nginx/sites-available/{{ api_domain }}.conf
+    dest: /etc/nginx/sites-enabled/{{ api_domain }}.conf
     state: link
-  loop: "{{ nginx_sites }}"
-  notify: Reload Nginx
+    force: yes
 
-- name: Test Nginx config
+- name: Enable frontend site
+  file:
+    src: /etc/nginx/sites-available/{{ frontend_domain }}.conf
+    dest: /etc/nginx/sites-enabled/{{ frontend_domain }}.conf
+    state: link
+    force: yes
+
+- name: Test Nginx configuration
   command: nginx -t
   register: nginx_test
-  failed_when: "'successful' not in nginx_test.stderr"
+  failed_when: "'successful' not in nginx_test.stdout + nginx_test.stderr"
 
 - name: Reload Nginx
   service:
     name: nginx
     state: reloaded
 
-- name: Obtain SSL certs
+- name: Obtain SSL certificate for backend
   command: >
-    certbot certonly --webroot
-    -w /var/www/certbot
-    -d {{ item.domain }}
-    --non-interactive --agree-tos
-    -m {{ email }}
+    certbot certonly --nginx -n --agree-tos
+    --email {{ lookup('env','EMAIL') }}
+    -d {{ api_domain }}
   args:
-    creates: "/etc/letsencrypt/live/{{ item.domain }}/fullchain.pem"
-  loop: "{{ nginx_sites }}"
+    creates: /etc/letsencrypt/live/{{ api_domain }}/fullchain.pem
+
+- name: Obtain SSL certificate for frontend
+  command: >
+    certbot certonly --nginx -n --agree-tos
+    --email {{ lookup('env','EMAIL') }}
+    -d {{ frontend_domain }}
+  args:
+    creates: /etc/letsencrypt/live/{{ frontend_domain }}/fullchain.pem
+
+- name: Reload Nginx after SSL
+  service:
+    name: nginx
+    state: reloaded
